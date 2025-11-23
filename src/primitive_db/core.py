@@ -1,14 +1,16 @@
-"""Основная логика работы с таблицами и данными."""
+"""Основная логика работы с таблицами и данными"""
 
 from prettytable import PrettyTable
-from .utils import load_table_data, save_table_data
-from .parser import validate_value_type, parse_where_clause, parse_set_clause
+
 from .constants import VALID_TYPES
-from .decorators import handle_db_errors, confirm_action, log_time, simple_cache
+from .decorators import confirm_action, handle_db_errors, log_time
+from .parser import validate_value_type
+from .utils import load_table_data, save_table_data
+
 
 @handle_db_errors
 def create_table(metadata, table_name, columns):
-    """Создает новую таблицу."""
+    """Создает новую таблицу"""
     if table_name in metadata:
         print(f'Ошибка: Таблица "{table_name}" уже существует.')
         return metadata
@@ -21,22 +23,30 @@ def create_table(metadata, table_name, columns):
     for col in table_columns:
         col_parts = col.split(":")
         if len(col_parts) != 2:
-            print(f'Ошибка: Некорректный формат столбца "{col}". Используйте: имя:тип')
+            print(
+                f'Ошибка: Некорректный формат столбца "{col}". '
+                'Используйте: имя:тип'
+            )
             return metadata
         
         col_name, col_type = col_parts
         if col_type not in VALID_TYPES:
-            print(f'Ошибка: Неподдерживаемый тип данных "{col_type}" в столбце "{col_name}".')
+            print(
+                f'Ошибка: Неподдерживаемый тип данных "{col_type}" '
+                f'в столбце "{col_name}".'
+            )
             return metadata
     
     metadata[table_name] = table_columns
-    print(f'Таблица "{table_name}" успешно создана со столбцами: {", ".join(table_columns)}')
+    columns_str = ", ".join(table_columns)
+    print(f'Таблица "{table_name}" успешно создана со столбцами: {columns_str}')
     return metadata
+
 
 @handle_db_errors
 @confirm_action("удаление таблицы")
 def drop_table(metadata, table_name):
-    """Удаляет таблицу."""
+    """Удаляет таблицу"""
     if table_name not in metadata:
         print(f'Ошибка: Таблица "{table_name}" не существует.')
         return metadata
@@ -45,9 +55,10 @@ def drop_table(metadata, table_name):
     print(f'Таблица "{table_name}" успешно удалена.')
     return metadata
 
+
 @handle_db_errors
 def list_tables(metadata):
-    """Выводит список всех таблиц."""
+    """Выводит список всех таблиц"""
     if not metadata:
         print("Нет созданных таблиц.")
         return
@@ -56,10 +67,11 @@ def list_tables(metadata):
     for table_name in metadata:
         print(f"- {table_name}")
 
+
 @handle_db_errors
 @log_time
 def insert(metadata, table_name, values):
-    """Добавляет запись в таблицу."""
+    """Добавляет запись в таблицу"""
     if table_name not in metadata:
         raise KeyError(f'Таблица "{table_name}" не существует.')
     
@@ -67,8 +79,11 @@ def insert(metadata, table_name, values):
     columns = metadata[table_name]
     
     # Проверяем количество значений (без ID)
-    if len(values) != len(columns) - 1:
-        raise ValueError(f'Ожидается {len(columns) - 1} значений, получено {len(values)}')
+    expected_count = len(columns) - 1
+    if len(values) != expected_count:
+        raise ValueError(
+            f'Ожидается {expected_count} значений, получено {len(values)}'
+        )
     
     # Генерируем ID
     new_id = 1
@@ -86,9 +101,10 @@ def insert(metadata, table_name, values):
     print(f'Запись с ID={new_id} успешно добавлена в таблицу "{table_name}".')
     return table_data
 
+
 @handle_db_errors
 @log_time
-@simple_cache
+#@simple_cache
 def select(metadata, table_name, where_clause=None):
     """Выбирает записи из таблицы."""
     if table_name not in metadata:
@@ -102,14 +118,10 @@ def select(metadata, table_name, where_clause=None):
     
     # Фильтруем записи если задано условие
     if where_clause:
+        from .parser import apply_where_condition
         filtered_data = []
         for record in table_data:
-            match = True
-            for col, value in where_clause.items():
-                if str(record.get(col, '')) != str(value):
-                    match = False
-                    break
-            if match:
+            if apply_where_condition(record, where_clause):
                 filtered_data.append(record)
         result_data = filtered_data
     else:
@@ -131,6 +143,7 @@ def select(metadata, table_name, where_clause=None):
     
     return result_data
 
+
 @handle_db_errors
 def update(metadata, table_name, set_clause, where_clause):
     """Обновляет записи в таблице."""
@@ -138,17 +151,18 @@ def update(metadata, table_name, set_clause, where_clause):
         raise KeyError(f'Таблица "{table_name}" не существует.')
     
     table_data = load_table_data(table_name)
-    columns_dict = {col.split(":")[0]: col.split(":")[1] for col in metadata[table_name]}
+    columns_dict = {
+        col.split(":")[0]: col.split(":")[1] for col in metadata[table_name]
+    }
     
     updated_count = 0
     for record in table_data:
         match = True
-        # Проверяем условие WHERE
+        # Проверяем условие WHERE с использованием нового парсера
         if where_clause:
-            for col, value in where_clause.items():
-                if str(record.get(col, '')) != str(value):
-                    match = False
-                    break
+            from .parser import apply_where_condition
+            if not apply_where_condition(record, where_clause):
+                match = False
         
         if match:
             # Обновляем поля согласно SET
@@ -164,6 +178,7 @@ def update(metadata, table_name, set_clause, where_clause):
         print("Записи для обновления не найдены.")
     
     return table_data
+
 
 @handle_db_errors
 @confirm_action("удаление записей")
@@ -181,10 +196,9 @@ def delete(metadata, table_name, where_clause):
     for record in table_data:
         match = True
         if where_clause:
-            for col, value in where_clause.items():
-                if str(record.get(col, '')) != str(value):
-                    match = False
-                    break
+            from .parser import apply_where_condition
+            if not apply_where_condition(record, where_clause):
+                match = False
         
         if match:
             deleted_count += 1
@@ -193,15 +207,18 @@ def delete(metadata, table_name, where_clause):
     
     if deleted_count > 0:
         save_table_data(table_name, filtered_data)
-        print(f'Успешно удалено {deleted_count} записей из таблицы "{table_name}".')
+        print(
+            f'Успешно удалено {deleted_count} записей из таблицы "{table_name}".'
+        )
     else:
         print("Записи для удаления не найдены.")
     
     return filtered_data
 
+
 @handle_db_errors
 def info(metadata, table_name):
-    """Выводит информацию о таблице."""
+    """Выводит информацию о таблице"""
     if table_name not in metadata:
         raise KeyError(f'Таблица "{table_name}" не существует.')
     
