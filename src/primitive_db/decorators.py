@@ -68,3 +68,10 @@ def simple_cache(func):
             _simple_cache[cache_key] = result
             return result
     return wrapper
+    
+    
+def clear_cache():
+    """Очищает кэш"""
+    global _simple_cache
+    _simple_cache = {}
+    print("Кэш очищен.")

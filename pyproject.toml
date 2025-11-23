@@ -2,7 +2,7 @@
 name = "project#2-barsukov-m25-555"
 version = "0.1.0"
 description = "Primitive database implementation"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["Mikhail Barsukov <Mr.Brock63@yandex.ru>"]
 packages = [
     { include = "src" },
 ]

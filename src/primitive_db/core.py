@@ -3,7 +3,7 @@
 from prettytable import PrettyTable
 
 from .constants import VALID_TYPES
-from .decorators import confirm_action, handle_db_errors, log_time
+from .decorators import clear_cache, confirm_action, handle_db_errors, log_time
 from .parser import validate_value_type
 from .utils import load_table_data, save_table_data
 
@@ -14,6 +14,9 @@ def create_table(metadata, table_name, columns):
     if table_name in metadata:
         print(f'Ошибка: Таблица "{table_name}" уже существует.')
         return metadata
+    
+    # Очищаем кэш при создании таблицы
+    clear_cache()
     
     # Добавляем ID столбец автоматически
     table_columns = ["ID:int"]
@@ -51,6 +54,8 @@ def drop_table(metadata, table_name):
         print(f'Ошибка: Таблица "{table_name}" не существует.')
         return metadata
     
+    clear_cache()
+    
     del metadata[table_name]
     print(f'Таблица "{table_name}" успешно удалена.')
     return metadata
@@ -74,6 +79,8 @@ def insert(metadata, table_name, values):
     """Добавляет запись в таблицу"""
     if table_name not in metadata:
         raise KeyError(f'Таблица "{table_name}" не существует.')
+    
+    clear_cache()
     
     table_data = load_table_data(table_name)
     columns = metadata[table_name]
@@ -150,6 +157,8 @@ def update(metadata, table_name, set_clause, where_clause):
     if table_name not in metadata:
         raise KeyError(f'Таблица "{table_name}" не существует.')
     
+    clear_cache()
+    
     table_data = load_table_data(table_name)
     columns_dict = {
         col.split(":")[0]: col.split(":")[1] for col in metadata[table_name]
@@ -186,6 +195,8 @@ def delete(metadata, table_name, where_clause):
     """Удаляет записи из таблицы."""
     if table_name not in metadata:
         raise KeyError(f'Таблица "{table_name}" не существует.')
+    
+    clear_cache()
     
     table_data = load_table_data(table_name)
     
