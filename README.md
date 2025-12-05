@@ -77,7 +77,7 @@
 
 ## Демонстрация
 
-https://asciinema.org/a/P24r9KbBqitESPxmBlSGiJAUj
+https://asciinema.org/a/fA5Eg1MbwzXdjl8wYWxbwMOLe
 
 *или файл "demo2.cast"
 
